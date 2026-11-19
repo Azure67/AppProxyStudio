@@ -1,0 +1,26 @@
+name: Windows tests
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          architecture: x64
+      - name: Install project-local dependencies and pinned core
+        shell: pwsh
+        run: ./setup.ps1
+      - name: Configuration and local proxy integration
+        shell: pwsh
+        run: |
+          python tests/test_engine.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tests/test_codex.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tests/test_processes.py
+          exit $LASTEXITCODE
