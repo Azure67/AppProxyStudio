@@ -23,4 +23,6 @@ jobs:
           python tests/test_codex.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python tests/test_processes.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tests/test_diagnostics.py
           exit $LASTEXITCODE

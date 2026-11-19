@@ -12,6 +12,7 @@ from engine import ROOT,DATA,CoreManager,load_state,save_state,import_nodes,merg
 
 sys.modules.setdefault('app',sys.modules[__name__])
 from process_ui import ProcessFeatures
+from diagnostic_ui import DiagnosticFeatures
 from processes import related_paths
 
 STYLE='''
@@ -71,17 +72,17 @@ def table(headings):
     t.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch);t.verticalHeader().setDefaultSectionSize(32)
     return t
 
-class Studio(QMainWindow, ProcessFeatures):
+class Studio(QMainWindow, ProcessFeatures, DiagnosticFeatures):
     def __init__(self):
         super().__init__();self.setWindowTitle('AppProxy Studio');self.resize(1180,760);self.setMinimumSize(1060,700)
         self.setWindowIcon(QIcon(str(ROOT/'assets'/'app.ico')));self.manager=CoreManager();self.state=load_state();self.worker=None;self.last_running=False;self.selected_id=None
         central=QWidget();self.setCentralWidget(central);layout=QVBoxLayout(central);layout.setContentsMargins(10,8,10,10);layout.setSpacing(8)
         toolbar=QFrame();toolbar.setObjectName('toolbar');header=QHBoxLayout(toolbar);header.setContentsMargins(0,0,0,8)
-        self.start=button('启动引擎',self.toggle_engine);header.addWidget(self.start)
+        self.start=button('启动引擎',self.toggle_engine);header.addWidget(self.start);header.addWidget(button('启动诊断',self.check_diagnostics))
         self.mode_label=label('','muted');header.addWidget(self.mode_label);header.addStretch()
-        header.addWidget(label('AppProxy Studio 1.3','muted'));layout.addWidget(toolbar)
+        header.addWidget(label('AppProxy Studio 1.4','muted'));layout.addWidget(toolbar)
         self.tabs=QTabWidget();layout.addWidget(self.tabs,1)
-        self.init_process_features();self.build_apps();self.build_nodes();self.build_connections();self.build_settings();self.build_logs()
+        self.init_process_features();self.build_apps();self.build_nodes();self.build_connections();self.build_diagnostics();self.build_settings();self.build_logs()
         self.status=label('引擎未启动','status');self.statusBar().addWidget(self.status)
         self.summary=label('','muted');self.statusBar().addPermanentWidget(self.summary)
         self.refresh();self.log('先导入节点，再添加软件并选择节点；配置好后启动引擎。')
@@ -94,7 +95,7 @@ class Studio(QMainWindow, ProcessFeatures):
         v=self.page('应用通道');tools=QHBoxLayout()
         for text,fn,kind in [('添加软件…',self.add_file,None),('从运行进程选择',self.add_process,None),('切换代理开关',self.toggle_app,None),('关联辅助进程',self.manage_helpers,None)]:tools.addWidget(button(text,fn,kind))
         tools.addStretch();tools.addWidget(button('移除通道',self.remove_app));v.addLayout(tools)
-        split=QSplitter();v.addWidget(split,1);self.apps=table(['应用','代理状态','出口节点','本地端口']);split.addWidget(self.apps)
+        split=QSplitter();v.addWidget(split,1);self.apps=table(['应用','代理配置','出口节点','本地端口']);split.addWidget(self.apps)
         right=QWidget();right.setMinimumWidth(330);r=QVBoxLayout(right);r.setContentsMargins(14,2,0,0);r.addWidget(label('应用设置','section'))
         form=QFormLayout();form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapAllRows);form.setVerticalSpacing(8)
         self.name=QLineEdit();self.path=QLineEdit();self.port=QSpinBox();self.port.setRange(1024,65535);self.node=QComboBox()
@@ -144,7 +145,7 @@ class Studio(QMainWindow, ProcessFeatures):
     def refresh(self):
         selected=self.selected_id;self.apps.blockSignals(True);self.apps.setRowCount(len(self.state['apps']))
         for i,a in enumerate(self.state['apps']):
-            for j,value in enumerate((a['name']+(' · +'+str(len(related_paths(a))) if related_paths(a) else ''),'路径失效' if not Path(a['path']).is_file() else ('代理开启' if a['enabled'] else '直连'),a.get('node') or '未选择',a['port'])):
+            for j,value in enumerate((a['name']+(' · +'+str(len(related_paths(a))) if related_paths(a) else ''),'路径失效' if not Path(a['path']).is_file() else ('已设代理' if a['enabled'] else '已设直连'),a.get('node') or '未选择',a['port'])):
                 item=QTableWidgetItem(str(value));item.setToolTip(a['path'] if j==0 else str(value));self.apps.setItem(i,j,item)
             self.apps.item(i,1).setForeground(QColor('#21623f' if a['enabled'] else '#666666'))
         self.apps.blockSignals(False);self.node.clear();self.node.addItem('请选择节点','');
@@ -211,7 +212,7 @@ class Studio(QMainWindow, ProcessFeatures):
         except Exception as e:self.error(e)
     def toggle_engine(self):
         if self.manager.running:self.run(self.manager.stop,lambda _:self.log('引擎已停止；本工具端口与 TUN 已释放。'))
-        else:self.run(lambda:self.manager.start(copy.deepcopy(self.state)),lambda _:self.log('引擎启动成功。'))
+        else:self.check_diagnostics(start_after=True)
     def editor(self,title,initial,callback):
         d=QDialog(self);d.setWindowTitle(title);d.resize(800,580);v=QVBoxLayout(d)
         v.addWidget(label('节点仅保存于项目 data 文件夹；编辑内容可能包含密码。','muted'));edit=QPlainTextEdit(initial);v.addWidget(edit)

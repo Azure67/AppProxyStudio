@@ -10,6 +10,7 @@ Python / PySide6 · Mihomo · GPL-3.0-or-later
 - TUN 模式透明分流；独立端口模式供支持显式代理的软件使用。
 - 主程序与手动勾选的辅助进程共用节点和开关；已知 Codex 后台按限定安装路径关联。
 - 当前连接、目标、所属通道、实际走向和匹配规则；搜索及从连接关联辅助进程。
+- 启动前自动诊断权限、TCP/UDP 端口占用、核心/路径、疑似 TUN 冲突及系统/环境代理；也可点击“启动诊断”单独检查。
 - 导入节点 YAML、常见分享链接与订阅；手动选节点、延迟测试。
 - 配置先校验后应用，支持运行中修改节点/开关，失败时保留原通道。
 - 紧凑浅色桌面界面，应用设置与连接诊断分开显示。
@@ -64,6 +65,7 @@ YAML 协议能力以随附核心为准。复杂传输/插件请使用 YAML；不
 python tests/test_engine.py
 python tests/test_codex.py
 python tests/test_processes.py
+python tests/test_diagnostics.py
 powershell -ExecutionPolicy Bypass -File .\build.ps1
 ```
 
@@ -87,3 +89,7 @@ powershell -ExecutionPolicy Bypass -File .\build.ps1
 界面布局参考 [qBittorrent](https://www.qbittorrent.org/screenshots)；按应用分流与工程取舍参考 [ProxiFyre](https://github.com/wiresock/proxifyre)、[Clash Verge Rev](https://github.com/clash-verge-rev/clash-verge-rev)、[v2rayN](https://github.com/2dust/v2rayN)。未复制这些项目的代码与图标。
 
 本项目源码使用 [GPL-3.0-or-later](LICENSE)。第三方组件许可证和来源见 [THIRD_PARTY.md](THIRD_PARTY.md)。
+
+## 1.4 改进
+
+启动诊断直接接入启动流程，缺少权限/核心、配置错误、端口冲突会阻止启动并显示处理建议；疑似 TUN 或显式代理冲突允许检查后继续。检查只读，不自动更改其他软件或网卡。列表使用“已设代理/已设直连”，表示配置，不宣称连通性。诊断不会发起节点请求；其他进程的环境、启动参数和内置代理设置仍需自行检查。
